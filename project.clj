@@ -12,5 +12,4 @@
                  [nand2tetris/Compilers "0.1.0-SNAPSHOT"]]
   :source-paths ["src/clj"]
   :java-source-paths ["src/java"]
-  :main n2trunner.core
-  :aot [n2trunner.ui])
+  :main n2trunner.core)
