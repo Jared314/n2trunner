@@ -1,4 +1,4 @@
-package builtInChips;
+package builtInGates;
 
 import Hack.Gates.BuiltInGate;
 import Hack.Gates.Node;

@@ -1,11 +1,14 @@
 (ns n2trunner.ui
-    (:import [Hack.HardwareSimulator HardwareSimulator]
-             [Hack.Controller HackController]
+    (:import [Hack.Gates GatesManager]
+             [Hack.HardwareSimulator HardwareSimulator]
+             [Hack.Controller HackController HackController2]
              [java.io File])
     (:gen-class
       :extends Hack.HardwareSimulator.HardwareSimulator
       :methods [[loadgates [String] void]
-                [runscripts [String] void]]))
+                [runscripts [String] void]
+                [setBuiltinNamespace [String] void]
+                [setGatesDirectory [String] void]]))
 
 (defn- getfiles [path extension]
        (let [f (File. path)
@@ -19,9 +22,18 @@
 (defn -loadgates [this path] 
       (map #(.loadGate this (.getName %) true) (getfiles path "hdl")))
 
-(defn -runscript [this path]
-      (HackController. this path))
+(defn- runscript [sim path]
+       (println path)
+       (HackController2. sim path))
 
 (defn -runscripts [this path] 
-      (let [controller (HackController. this nil)]
-           (map #(.runscript this %) (getfiles path "tst"))))
+      (let [sim this
+            files (getfiles path "tst")]
+           (doall (map #(runscript sim (.getPath %))
+                files))))
+
+(defn -setBuiltinNamespace [this ns]
+      (.setBuiltInDir (GatesManager/getInstance) (File. ns)))
+
+(defn -setGatesDirectory [this path]
+      (.setWorkingDir (GatesManager/getInstance) (File. path)))

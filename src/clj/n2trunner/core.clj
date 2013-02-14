@@ -1,19 +1,13 @@
-(ns n2trunner.core
-  (:require [n2trunner.ui])
-  (:import [Hack.Gates GatesManager]
-           [Hack.HardwareSimulator HardwareSimulator]
-           [Hack.HardwareSimulator HardwareSimulator HardwareSimulatorApplication]
-           [SimulatorsGUI HardwareSimulatorComponent]
-           [SimulatorsGUI HardwareSimulatorControllerComponent]
-           [java.io File]))
+(ns n2trunner.core)
 
-(defn sendCommand [gatepath testspath]
-      (let [gatemanager (GatesManager/getInstance)
-            sim (n2trunner.ui.)]
-           (.setWorkingDir gatemanager (File. gatepath))
-           (.loadgates sim gatepath)
-           (.runscripts sim testspath)))
+(defn runtests [gatepath testspath]
+      (doto (n2trunner.ui.)
+            (.setBuiltinNamespace "builtInGates")
+            (.setGatesDirectory gatepath)
+            (.loadgates gatepath)
+            (.runscripts testspath)))
 
-(defn -main []
-  (sendCommand "/Users/jared314/Desktop/gates" 
-               "/Users/jared314/Downloads/nand2tetris/projects/00"))
+(defn -main [& args]
+      (runtests "/Users/jared314/Desktop/gates" 
+                "/Users/jared314/Desktop/tests")
+      nil)

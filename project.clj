@@ -13,4 +13,4 @@
   :source-paths ["src/clj"]
   :java-source-paths ["src/java"]
   :main n2trunner.core
-  :aot [n2trunner.ui builtInChips])
+  :aot [n2trunner.ui])
