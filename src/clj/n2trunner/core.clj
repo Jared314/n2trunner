@@ -35,7 +35,13 @@
       (loadgates gatepath)
       (runscripts testspath))
 
+(defn expand-home-path [path]
+      (if (.startsWith path (str "~" File/separator))
+          (str (System/getProperty "user.home") (.substring path 1))
+          path))
+
 (defn -main [& args]
-      (runtests "/Users/jared314/Desktop/gates" 
-;                "/Users/jared314/Desktop/tests"))))
-                "/Users/jared314/Downloads/nand2tetris/projects/01"))
+      (let [chipspath (expand-home-path (first args))
+            testspath (expand-home-path (second args))]
+      (runtests chipspath
+                testspath)))
