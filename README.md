@@ -1,13 +1,15 @@
 # n2trunner
 
-A Clojure library designed to ... well, that part is up to you.
+A nand2tetris command-line test runner.
 
 ## Usage
 
-FIXME
+Currently, there are no stand alone releases available, so you must use the Leiningen 2 build tool.
+
+```bash
+lein run <chips path> <tests path>
+```
 
 ## License
 
-Copyright © 2013 FIXME
-
-Distributed under the Eclipse Public License, the same as Clojure.
+Distributed under the GNU General Public License (GPL) Version 2, the same as nand2tetris.
