@@ -2,7 +2,7 @@
 
 (defn runtests [gatepath testspath]
       (doto (n2trunner.ui.)
-            (.setBuiltinNamespace "builtInGates")
+            (.setBuiltinNamespace "builtIn")
             (.setGatesDirectory gatepath)
             (.loadgates gatepath)
             (.runscripts testspath)))
