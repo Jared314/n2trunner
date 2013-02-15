@@ -22,10 +22,10 @@
 
 (defn runscripts [path] 
       (let [files (getfiles path "tst")
-            testcontroller (TestController.)]
+            testcontroller (TestController.)
+            sim (HardwareSimulator2.)]
            (dorun (filter true? 
-                          (map #(.runScript testcontroller (HardwareSimulator2.) (.getPath %)) 
-                               files)))))
+                          (map #(.runScript testcontroller sim %) files)))))
 
 ; Loads the hdl files found in the directory into the GateClass cache
 (defn loadgates [path] 

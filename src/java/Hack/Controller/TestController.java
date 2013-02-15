@@ -51,12 +51,6 @@ public class TestController
     private String currentOutputName;
     private String currentComparisonName;
 
-    // The script commands
-    private Script script;
-
-    // The controlled simulator
-    protected HackSimulator simulator;
-
     // The current speed unit.
     private int currentSpeedUnit;
 
@@ -122,32 +116,31 @@ public class TestController
 
     public TestController() { }
 
-    private void init(HackSimulator simulator, String scriptFileName){
-        File file = new File(scriptFileName);
+    private Script init(HackSimulator simulator, File file){
         if (!file.exists())
-            displayMessage(scriptFileName + " doesn't exist", true);
-
-        this.simulator = simulator;
-        simulator.addListener(this);
-
+            displayMessage(file.getPath() + " doesn't exist", true);
         try {
-            loadNewScript(file, false);
+            return loadNewScript(file);
         } catch (ScriptException se) {
             displayMessage(se.getMessage(), true);
         } catch (ControllerException ce) {
             displayMessage(ce.getMessage(), true);
         }
+        return null;
     }
 
-    public boolean runScript(HackSimulator simulator, String scriptFileName) {
-        init(simulator, scriptFileName);
+    public boolean runScript(HackSimulator simulator, File scriptFile) {
+        simulator.addListener(this);
+        Script script = init(simulator, scriptFile);
+        // Should throw exception
+        if(script == null) return false;
 
         rewind(simulator);
 
         fastForwardRunning = true;
 
         while (fastForwardRunning)
-             singleStep();
+             singleStep(simulator, script);
 
         return isSuccess();
     }
@@ -183,7 +176,7 @@ public class TestController
     // Executes a single step from the script, checks for a breakpoint and
     // sets the status of the system accordingly.
     // Synchronized because of the notifyAll call.
-    private synchronized void singleStep() {
+    private void singleStep(HackSimulator simulator, Script script) {
 
         singleStepLocked = true;
 
@@ -192,7 +185,7 @@ public class TestController
             singleStepRunning = true;
 
             do {
-                terminatorType = miniStep();
+                terminatorType = miniStep(simulator, script);
             } while (terminatorType == Command.MINI_STEP_TERMINATOR && singleStepRunning);
 
             singleStepRunning = false;
@@ -212,7 +205,7 @@ public class TestController
         }
 
         singleStepLocked = false;
-        notifyAll();
+//        notifyAll();
     }
 
     // Displays the message of the given exception and stops the script's execution.
@@ -223,7 +216,7 @@ public class TestController
 
     // Executes one command from the script and advances to the next.
     // Returns the command's terminator.
-    private byte miniStep()
+    private byte miniStep(HackSimulator simulator, Script script)
      throws ControllerException, ProgramException, CommandException, VariableException {
         Command command;
         boolean redo;
@@ -246,7 +239,7 @@ public class TestController
                 doOutputListCommand(command);
                 break;
             case Command.OUTPUT_COMMAND:
-                doOutputCommand(command);
+                doOutputCommand(command, simulator);
                 break;
             case Command.ECHO_COMMAND:
                 doEchoCommand(command);
@@ -293,7 +286,7 @@ public class TestController
                         comparisonFile.close();
                     }
                     else
-                        displayMessage("End of script " + currentScriptFile.getName(), false);
+                        displayMessage("End of script ", false);
                 } catch (IOException ioe) {
                     throw new ControllerException("Could not read comparison file");
                 }
@@ -359,7 +352,7 @@ public class TestController
     }
 
     // Executes the controller's output command.
-    private void doOutputCommand(Command command) throws ControllerException, VariableException {
+    private void doOutputCommand(Command command, HackSimulator simulator) throws ControllerException, VariableException {
         if (output == null)
             throw new ControllerException("No output file specified");
 
@@ -454,10 +447,10 @@ public class TestController
     }
 
     // loads the given script file and restarts the GUI.
-    protected void loadNewScript(File file, boolean displayMessage)
+    protected Script loadNewScript(File file)
      throws ControllerException, ScriptException {
         currentScriptFile = file;
-        script = new Script(file.getPath());
+        Script script = new Script(file.getPath());
         
         currentCommandIndex = 0;
         output = null;
@@ -465,8 +458,7 @@ public class TestController
         comparisonFile = null;
         currentComparisonName = "";
 
-        if (displayMessage)
-            displayMessage("New script loaded: " + file.getPath(), false);
+        return script;
     }
 
     // Resets the output file.
