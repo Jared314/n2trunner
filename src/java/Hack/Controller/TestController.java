@@ -10,42 +10,8 @@ import Hack.Utilities.*;
 import Hack.Events.*;
 import Hack.Gates.HDLException;
 
-public class HackController2
+public class TestController
  implements ControllerEventListener, ActionListener, ProgramEventListener {
-
-    /**
-     * The number of speed units.
-     */
-    //public static final int NUMBER_OF_SPEED_UNITS = 5;
-
-    /**
-     * The speed function for data flow animation.
-     */
-    //public static final float[] SPEED_FUNCTION = {0f, 0.35f, 0.63f, 0.87f, 1f};
-
-    /**
-     * The speed function for fast forward mode.
-     */
-    //public static final int[] FASTFORWARD_SPEED_FUNCTION = {500, 1000, 2000, 4000, 15000};
-
-    // ANIMATION MODES:
-
-    /**
-     * Animation mode: Specifies using static display changes - displays value changes staticaly
-     */
-    //public static final int DISPLAY_CHANGES = 0;
-
-    /**
-     * Animation mode: Specifies using dynamic animation - fully animates value changes
-     */
-    //public static final int ANIMATION = 1;
-
-    /**
-     * Animation mode: Specifies using no display changes.
-     * In this mode, the speed has no meening.
-     */
-    //public static final int NO_DISPLAY_CHANGES = 2;
-
 
     // NUMERIC FORMATS:
 
@@ -65,28 +31,6 @@ public class HackController2
     public static final int BINARY_FORMAT = 2;
 
 
-    // ADDITIONAL DISPLAYS
-
-    /**
-     * Specifies the additional display of the script file component.
-     */
-    //public static final int SCRIPT_ADDITIONAL_DISPLAY = 0;
-
-    /**
-     * Specifies the additional display of the output file component.
-     */
-    //public static final int OUTPUT_ADDITIONAL_DISPLAY = 1;
-
-    /**
-     * Specifies the additional display of the comparison file component.
-     */
-    //public static final int COMPARISON_ADDITIONAL_DISPLAY = 2;
-
-    /**
-     * Specifies no additional display.
-     */
-    //public static final int NO_ADDITIONAL_DISPLAY = 3;
-
     // The default dir for loading script files
     private static final String INITIAL_SCRIPT_DIR = "scripts";
 
@@ -99,9 +43,6 @@ public class HackController2
 
     // A helper string with spaces
     private static final String SPACES = "                                        ";
-
-    // The contorller's GUI
-    //protected ControllerGUI gui;
 
     // The file of the current script
     private File currentScriptFile;
@@ -118,9 +59,6 @@ public class HackController2
 
     // The current speed unit.
     private int currentSpeedUnit;
-
-    // The current animation mode.
-    private int animationMode;
 
     // The program counter
     private int currentCommandIndex;
@@ -167,9 +105,6 @@ public class HackController2
     private boolean programHalted;
     public boolean getProgramHalted(){ return programHalted; }
 
-    // The speed delays.
-    private int[] delays;
-
     // true if the comparison failed at some point in the script
     private boolean comparisonFailed;
     public boolean getComparisonFailed(){ return comparisonFailed; }
@@ -185,12 +120,9 @@ public class HackController2
     // The echo that was displayed (if any) when single step was stopped in the middle.
     private String lastEcho;
 
+    public TestController() { }
 
-    /**
-     * Constructs a new HackController with the given script file name.
-     * The script will be executed and the final result will be printed.
-     */
-    public HackController2(HackSimulator simulator, String scriptFileName) {
+    private void init(HackSimulator simulator, String scriptFileName){
         File file = new File(scriptFileName);
         if (!file.exists())
             displayMessage(scriptFileName + " doesn't exist", true);
@@ -207,22 +139,21 @@ public class HackController2
         }
     }
 
-    public boolean runScript(){
-        rewind();
+    public boolean runScript(HackSimulator simulator, String scriptFileName) {
+        init(simulator, scriptFileName);
+
+        rewind(simulator);
+
         fastForwardRunning = true;
-        try{
+
         while (fastForwardRunning)
              singleStep();
-        }catch(Exception ex){
-            programHalted = true;
-            return false;
-        }
 
         return isSuccess();
     }
 
     // Restarts the current script from the beginning.
-    private void rewind() {
+    private void rewind(HackSimulator simulator) {
         try {
             scriptEnded = false;
             programHalted = false;
@@ -251,6 +182,7 @@ public class HackController2
 
     // Executes a single step from the script, checks for a breakpoint and
     // sets the status of the system accordingly.
+    // Synchronized because of the notifyAll call.
     private synchronized void singleStep() {
 
         singleStepLocked = true;
@@ -562,14 +494,9 @@ public class HackController2
     // Displays the given message with the given type (error or not)
     private void displayMessage(String message, boolean error) {
         message = currentScriptFile.getName() + ": " + message;
-        if (error) {
-            System.err.println(message);
-            System.err.flush(); // Flush to prevent intermixing of err and out stream
-        }
-        else {
-            System.out.println(message);
-            System.out.flush(); // Flush to prevent intermixing of err and out stream
-        }
+        PrintStream s = (error ? System.err : System.out);
+        s.println(message);
+        s.flush(); // Manual flush to prevent intermixing of err and out stream
     }
 
     // Returns the version string
@@ -577,94 +504,45 @@ public class HackController2
         return " (" + Definitions.version + ")";
     }
 
-    public void actionPerformed(ActionEvent e) {
-    }
+    public void actionPerformed(ActionEvent e) { }
 
-    public void programChanged(ProgramEvent event) {
-        switch (event.getType()) {
-            case ProgramEvent.SAVE:
-                break;
-            case ProgramEvent.LOAD:
-                break;
-            case ProgramEvent.CLEAR:
-                break;
-        }
-    }
+    public void programChanged(ProgramEvent event) { }
 
     public void actionPerformed(ControllerEvent event) {
         try {
             switch (event.getAction()) {
                 case ControllerEvent.SINGLE_STEP:
-                    break;
                 case ControllerEvent.FAST_FORWARD:
-                    break;
                 case ControllerEvent.STOP:
-                    stopMode();
-                    break;
                 case ControllerEvent.REWIND:
-                    displayMessage("Script restarted", false);
-                    rewind();
-                    break;
                 case ControllerEvent.SPEED_CHANGE:
-                    break;
                 case ControllerEvent.BREAKPOINTS_CHANGE:
-                    break;
                 case ControllerEvent.SCRIPT_CHANGE:
-                    File file = (File)event.getData();
-                    loadNewScript(file, true);
-                    rewind();
-                    break;
                 case ControllerEvent.ANIMATION_MODE_CHANGE:
-                    break;
                 case ControllerEvent.NUMERIC_FORMAT_CHANGE:
-                    break;
                 case ControllerEvent.ADDITIONAL_DISPLAY_CHANGE:
-                    break;
                 case ControllerEvent.DISABLE_ANIMATION_MODE_CHANGE:
-                    break;
                 case ControllerEvent.ENABLE_ANIMATION_MODE_CHANGE:
-                    break;
                 case ControllerEvent.DISABLE_SINGLE_STEP:
-                    break;
                 case ControllerEvent.ENABLE_SINGLE_STEP:
-                    break;
                 case ControllerEvent.DISABLE_FAST_FORWARD:
-                    break;
                 case ControllerEvent.ENABLE_FAST_FORWARD:
-                    break;
                 case ControllerEvent.LOAD_PROGRAM:
-                    simulator.loadProgram();
-                    break;
                 case ControllerEvent.HALT_PROGRAM:
-                    displayMessage("End of program", false);
-                    programHalted = true;
-                    if (fastForwardRunning)
-                        stopMode();
-                    break;
                 case ControllerEvent.CONTINUE_PROGRAM:
-                    if (programHalted) {
-                        programHalted = false;
-                    }
-                    break;
                 case ControllerEvent.DISABLE_MOVEMENT:
-                    break;
                 case ControllerEvent.ENABLE_MOVEMENT:
                     break;
                 case ControllerEvent.DISPLAY_MESSAGE:
                     displayMessage((String)event.getData(), false);
                     break;
                 case ControllerEvent.DISPLAY_ERROR_MESSAGE:
-                    if (timer.isRunning())
-                        stopMode();
                     displayMessage((String)event.getData(), true);
                     break;
                 default:
                     doUnknownAction(event.getAction(), event.getData());
                     break;
             }
-        } catch (ScriptException e) {
-            displayMessage(e.getMessage(), true);
-            stopMode();
         } catch (ControllerException e) {
             displayMessage(e.getMessage(), true);
             stopMode();

@@ -1,6 +1,6 @@
 (ns n2trunner.core
     (:import [Hack.Gates GatesManager]
-             [Hack.Controller HackController2]
+             [Hack.Controller TestController]
              [Hack.Gates GateClass]
              [Hack.HardwareSimulator HardwareSimulator2]
              [java.io File]))
@@ -21,14 +21,16 @@
            (.setWorkingDir (GatesManager/getInstance) path)))
 
 (defn runscripts [path] 
-      (let [files (getfiles path "tst")]
-           (dorun (filter #(.runScript %) 
-                          (map #(HackController2. (HardwareSimulator2.) (.getPath %))
+      (let [files (getfiles path "tst")
+            testcontroller (TestController.)]
+           (dorun (filter true? 
+                          (map #(.runScript testcontroller (HardwareSimulator2.) (.getPath %)) 
                                files)))))
 
 ; Loads the hdl files found in the directory into the GateClass cache
 (defn loadgates [path] 
-      (dorun (map #(GateClass/getGateClass (.getPath %) true) (getfiles path "hdl"))))
+      (dorun (map #(GateClass/getGateClass (.getPath %) true) 
+                  (getfiles path "hdl"))))
 
 (defn runtests [gatepath testspath]
       (setPaths "builtInChips" gatepath)
@@ -43,5 +45,4 @@
 (defn -main [& args]
       (let [chipspath (expand-home-path (first args))
             testspath (expand-home-path (second args))]
-      (runtests chipspath
-                testspath)))
+           (runtests chipspath testspath)))
