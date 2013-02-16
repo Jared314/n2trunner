@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :repositories {"local" ~(str (.toURI (java.io.File. "repository")))}
   :dependencies [[org.clojure/clojure "1.4.0"]
+                 [jcurses.system/jcurses "1.0.0"]
                  [nand2tetris/Hack "0.1.0-SNAPSHOT"]
                  [nand2tetris/HackGUI "0.1.0-SNAPSHOT"]
                  [nand2tetris/Simulators "0.1.0-SNAPSHOT"]
