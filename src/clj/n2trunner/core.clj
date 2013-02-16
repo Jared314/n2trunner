@@ -1,4 +1,5 @@
 (ns n2trunner.core
+    (:require [clojure.java.io :refer [file]])
     (:import [Hack.Gates GatesManager]
              [Hack.Controller TestController]
              [Hack.Gates GateClass]
@@ -6,7 +7,7 @@
              [java.io File]))
 
 (defn getfiles [path extension]
-      (let [f (File. path)
+      (let [f (file path)
             ext (str "." extension)]
            (if (.isDirectory f)
                (filter #(.endsWith (.getName %) ext) (file-seq f))
@@ -15,10 +16,8 @@
                    []))))
 
 (defn setPaths [builtinNs gatePath]
-      (let [ns (if (instance? File builtinNs) builtinNs (File. builtinNs))
-            path (if (instance? File gatePath) gatePath (File. gatePath))]
-           (.setBuiltInDir (GatesManager/getInstance) ns)
-           (.setWorkingDir (GatesManager/getInstance) path)))
+      (.setBuiltInDir (GatesManager/getInstance) (file builtinNs))
+      (.setWorkingDir (GatesManager/getInstance) (file gatePath)))
 
 (defn runscripts [path] 
       (let [files (getfiles path "tst")
