@@ -28,8 +28,10 @@
 
 ; Loads the hdl files found in the directory into the GateClass cache
 (defn loadgates [path] 
+  (try
       (dorun (map #(GateClass/getGateClass (.getPath %) true) 
-                  (getfiles path "hdl"))))
+                  (getfiles path "hdl")))
+      (catch Exception ex (println (.getMessage ex)))))
 
 (defn runtests [gatepath testspath]
       (setPaths "builtInChips" gatepath)
