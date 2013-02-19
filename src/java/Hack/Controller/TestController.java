@@ -438,7 +438,6 @@ public class TestController
                     comparisonFailureLine = compareLinesCounter;
                     displayMessage("Comparison failure at line " + comparisonFailureLine,
                                        true);
-                    stopMode();
                 }
             } catch (IOException ioe) {
                 throw new ControllerException("Could not read comparison file");
