@@ -21,6 +21,7 @@ import Hack.Controller.*;
 import Hack.ComputerParts.*;
 import Hack.Utilities.*;
 import java.io.*;
+import java.util.*;
 import Hack.Gates.*;
 import Hack.Events.*;
 
@@ -58,9 +59,6 @@ public class HardwareSimulator2 extends HackSimulator
     // null value
     private static final short NULL_VALUE = 0;
 
-    // The gui of the simulator.
-    private HardwareSimulatorGUI gui;
-
     // The simulated gate.
     private Gate gate;
 
@@ -91,43 +89,6 @@ public class HardwareSimulator2 extends HackSimulator
     public HardwareSimulator2() {
         init();
         GatesManager.getInstance().enableChipsGUI(false);
-    }
-
-    /**
-     * Constructs a new Hardware Simulator with the given gui.
-     */
-    public HardwareSimulator2(HardwareSimulatorGUI gui) {
-        this.gui = gui;
-        init();
-
-        if (gui.getGatesPanel() != null)
-            GatesManager.getInstance().setGatesPanel(gui.getGatesPanel());
-
-        inputPins = new Pins(GateClass.INPUT_PIN_TYPE, gui.getInputPins());
-        outputPins = new Pins(GateClass.OUTPUT_PIN_TYPE, gui.getOutputPins());
-        internalPins = new Pins(CompositeGateClass.INTERNAL_PIN_TYPE, gui.getInternalPins());
-
-        partPins = new PartPins(gui.getPartPins());
-        parts = new Parts(gui.getParts());
-
-        inputPins.enableUserInput();
-        inputPins.setNullValue(NULL_VALUE, false);
-        inputPins.addErrorListener(this);
-        outputPins.disableUserInput();
-        outputPins.setNullValue(NULL_VALUE, false);
-        internalPins.disableUserInput();
-        internalPins.setNullValue(NULL_VALUE, false);
-        partPins.setNullValue(NULL_VALUE, false);
-
-        if (gui.getHDLView() != null)
-            gui.getHDLView().addTextFileListener(this);
-
-        if (gui.getGateInfo() != null)
-            gui.getGateInfo().reset();
-
-        gui.hideInternalPins();
-        gui.hidePartPins();
-        gui.hideParts();
     }
 
     // Initializes the hardware simulator
@@ -356,9 +317,6 @@ public class HardwareSimulator2 extends HackSimulator
             if (command.length != 2)
                 throw new CommandException("Illegal number of arguments to command", command);
 
-            if (gui != null && gui.getGateInfo() != null)
-                gui.getGateInfo().setChip(command[1]);
-
             try {
                 if (!command[1].endsWith(".hdl"))
                     throw new CommandException("A .hdl file is expected", command);
@@ -424,27 +382,6 @@ public class HardwareSimulator2 extends HackSimulator
     }
 
     public void restart() {
-        if (gui != null) {
-            inputPins.reset();
-            outputPins.reset();
-            internalPins.reset();
-            partPins.reset();
-            parts.reset();
-
-            if (gui.getHDLView() != null) {
-                gui.getHDLView().hideSelect();
-                gui.getHDLView().clearHighlights();
-            }
-
-            if (gui.getGateInfo() != null)
-                gui.getGateInfo().reset();
-
-            hideHighlightes();
-        }
-
-        if (gate != null)
-            gate.eval();
-
         time = 0;
         Gate.CLOCK_NODE.set((short)1);
         clockUp = false;
@@ -454,35 +391,7 @@ public class HardwareSimulator2 extends HackSimulator
         return vars;
     }
 
-    public void setAnimationMode(int newAnimationMode) {
-        if (gui != null) {
-            // enter NO_DISPLAY_CHANGES
-            if (newAnimationMode == HackController.NO_DISPLAY_CHANGES &&
-                    animationMode != HackController.NO_DISPLAY_CHANGES) {
-                inputPins.disableUserInput();
-            }
-
-            // exit NO_DISPLAY_CHANGES
-            if (newAnimationMode != HackController.NO_DISPLAY_CHANGES &&
-                    animationMode == HackController.NO_DISPLAY_CHANGES) {
-                inputPins.enableUserInput();
-            }
-
-            animationMode = newAnimationMode;
-
-            boolean animate = (animationMode == HackController.ANIMATION);
-            inputPins.setAnimate(animate);
-            outputPins.setAnimate(animate);
-            internalPins.setAnimate(animate);
-            partPins.setAnimate(animate);
-
-            boolean displayChanges = (animationMode != HackController.NO_DISPLAY_CHANGES);
-            inputPins.setDisplayChanges(displayChanges);
-            outputPins.setDisplayChanges(displayChanges);
-            internalPins.setDisplayChanges(displayChanges);
-            partPins.setDisplayChanges(displayChanges);
-        }
-    }
+    public void setAnimationMode(int newAnimationMode) { }
 
     public int getInitialAnimationMode() {
         return HackController.DISPLAY_CHANGES;
@@ -499,15 +408,11 @@ public class HardwareSimulator2 extends HackSimulator
         partPins.setNumericFormat(formatCode);
     }
 
-    public void prepareFastForward() {
-    }
+    public void prepareFastForward() { }
 
-    public void prepareGUI() {
-    }
+    public void prepareGUI() { }
 
-    protected HackSimulatorGUI getGUI() {
-        return gui;
-    }
+    protected HackSimulatorGUI getGUI() { return null; }
 
     // Loads a gate with the given name
     // If containsPath is true, the gateName should contain the full path.
@@ -515,81 +420,26 @@ public class HardwareSimulator2 extends HackSimulator
 
         GateClass gateClass = null;
 
-        if (gui != null)
-            displayMessage("Loading chip...", false);
-
         try {
-            // clears the gate cache, so all gates will be reloaded
-            //GateClass.clearGateCache();
-
             // find gate class and create gate
             gateClass = GateClass.getGateClass(gateName, containsPath);
 
             GatesManager.getInstance().removeAllChips();
             Gate oldGate = gate; // save old gate
-            gate = gateClass.newInstance(); // create new gate instance
+            gate = gateClass.newInstance();
 
             // register as dirty gate listener (and remove the old one)
             gate.addDirtyGateListener(this);
             if (oldGate != null)
                 oldGate.removeDirtyGateListener(this);
 
-            // assign gate's pins to the Pins computer parts
-            if (gui != null) {
-                inputPins.setNodes(gate.getInputNodes(), gateClass);
-                outputPins.setNodes(gate.getOutputNodes(), gateClass);
-                if (gateClass instanceof CompositeGateClass) {
-                    internalPins.setNodes(((CompositeGate)gate).getInternalNodes(), gateClass);
-                    partPins.setGate(gate);
-                    parts.setParts(((CompositeGate)gate).getParts());
-                }
-            }
-
             restart();
 
-            if (gui != null) {
-                if (gui.getGateInfo() != null)
-                    gui.getGateInfo().setChip(gateClass.getName());
-
-                notifyListeners(HardwareSimulatorControllerEvent.DISABLE_EVAL, null);
-                gui.getOutputPins().setDimmed(false);
-                gui.getInternalPins().setDimmed(false);
-                if (gateClass.isClocked()) {
-                    notifyListeners(HardwareSimulatorControllerEvent.ENABLE_TICKTOCK, null);
-                    if (gui.getGateInfo() != null) {
-                        gui.getGateInfo().setClocked(gateClass.isClocked());
-                        gui.getGateInfo().enableTime();
-                    }
-                }
-                else {
-                    notifyListeners(HardwareSimulatorControllerEvent.DISABLE_TICKTOCK, null);
-                    if (gui.getGateInfo() != null)
-                        gui.getGateInfo().disableTime();
-                }
-
-                if (gui.getHDLView() != null) {
-                    if (containsPath)
-                        gui.getHDLView().setContents(gateName);
-                    else
-                        gui.getHDLView().setContents(GatesManager.getInstance().getHDLFileName(gateName));
-                }
-
-                if (gateClass instanceof BuiltInGateClass)
-                    gui.hideInternalPins();
-                else
-                    gui.showInternalPins();
-
-                gui.hidePartPins();
-                gui.hideParts();
-            }
         } catch (HDLException he) {
             throw new GateException(he.getMessage());
         } catch (InstantiationException ie) {
             throw new GateException(ie.getMessage());
         }
-
-        if (gui != null)
-            clearMessage();
     }
 
     /**
@@ -648,22 +498,6 @@ public class HardwareSimulator2 extends HackSimulator
             } catch (HDLException he) {
                 displayMessage(he.getMessage(), true);
             }
-
-            if (partPinsLineFound) {
-                gui.hideInternalPins();
-                gui.hideParts();
-                gui.showPartPins();
-            }
-            else if (partsLineFound) {
-                gui.hideInternalPins();
-                gui.hidePartPins();
-                gui.showParts();
-            }
-            else {
-                gui.hidePartPins();
-                gui.hideParts();
-                gui.showInternalPins();
-            }
         }
     }
 
@@ -688,10 +522,6 @@ public class HardwareSimulator2 extends HackSimulator
      */
     public void gotDirty() {
         notifyListeners(HardwareSimulatorControllerEvent.ENABLE_EVAL, null);
-        if (gui != null) {
-            gui.getOutputPins().setDimmed(true);
-            gui.getInternalPins().setDimmed(true);
-        }
     }
 
     /**
@@ -699,10 +529,6 @@ public class HardwareSimulator2 extends HackSimulator
      */
     public void gotClean() {
         notifyListeners(HardwareSimulatorControllerEvent.DISABLE_EVAL, null);
-        if (gui != null) {
-            gui.getOutputPins().setDimmed(false);
-            gui.getInternalPins().setDimmed(false);
-        }
     }
 
     // Performs eval on the current gate
@@ -737,14 +563,6 @@ public class HardwareSimulator2 extends HackSimulator
         Gate.CLOCK_NODE.set((short)0);
         gate.tick();
         clockUp = true;
-
-        if (gui != null) {
-            // hide gui highlights
-            if (animationMode != HackController.NO_DISPLAY_CHANGES)
-                hideHighlightes();
-
-            updateTime();
-        }
     }
 
     // Performs tick on the current gate
@@ -753,20 +571,6 @@ public class HardwareSimulator2 extends HackSimulator
         gate.tock();
         clockUp = false;
         time++;
-
-        if (gui != null)
-            updateTime();
-    }
-
-    /**
-     * Updates the clock & time in the gui.
-     */
-    private void updateTime() {
-        if (gui != null && gui.getGateInfo() != null) {
-            gui.getGateInfo().setClock(clockUp);
-            if (!clockUp)
-                gui.getGateInfo().setTime(time);
-        }
     }
 
     // receives a variable name of the form xxx[i] and returns the numeric
